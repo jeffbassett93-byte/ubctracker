@@ -2,13 +2,16 @@
 //  iOSConcreteRepairTrackApp.swift
 //  iOSConcreteRepairTrack
 //
-//  Created by Jeff on 2026-02-03.
+//  Created on 2026-02-03.
 //
+//  This file is no longer used as the app entry point.
+//  ConcreteRepairTrackerApp.swift is now the main entry point.
 
+/*
 import SwiftUI
 import CoreData
 
-@main
+// @main - Removed: ConcreteRepairTrackerApp is now the main entry point
 struct iOSConcreteRepairTrackApp: App {
     let persistenceController = PersistenceController.shared
 
@@ -19,3 +22,4 @@ struct iOSConcreteRepairTrackApp: App {
         }
     }
 }
+*/
