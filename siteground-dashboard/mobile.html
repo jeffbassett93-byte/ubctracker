@@ -69,7 +69,64 @@
             justify-content: space-between;
             font-size: 14px;
             color: #666;
+            margin-bottom: 16px;
         }
+        
+        .wall-section {
+            margin-top: 16px;
+        }
+        
+        .wall-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .bay-grid {
+            background: #f8f8f8;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .bay-header {
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .location-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            margin-bottom: 4px;
+        }
+        
+        .location-cell {
+            aspect-ratio: 1;
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .location-cell:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .status-not-complete { background: #8E8E93; color: white; }
+        .status-holes-drilled { background: #007AFF; color: white; }
+        .status-rebar { background: #FF9500; color: white; }
+        .status-rods-installed { background: #34C759; color: white; }
+        .status-hss { background: #AF52DE; color: white; }
+        .status-other { background: #FF2D92; color: white; }
         
         .add-btn {
             background: #007AFF;
@@ -98,7 +155,7 @@
             font-weight: 500;
         }
         
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -106,34 +163,10 @@
             font-size: 16px;
         }
         
-        .wall-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-top: 16px;
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
         }
-        
-        .wall-card {
-            background: #f8f8f8;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 4px;
-        }
-        
-        .status-green { background: #34C759; }
-        .status-blue { background: #007AFF; }
-        .status-orange { background: #FF9500; }
-        .status-gray { background: #8E8E93; }
-        .status-purple { background: #AF52DE; }
-        .status-pink { background: #FF2D92; }
         
         .modal {
             display: none;
@@ -171,6 +204,64 @@
             padding: 12px;
             border-radius: 8px;
         }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .sync-btn {
+            background: #34C759;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        
+        .sync-btn:hover {
+            background: #2ECC52;
+        }
+        
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+        
+        .chip {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+            background: white;
+        }
+        
+        .chip.active {
+            background: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +272,34 @@
     
     <div class="container">
         <button class="add-btn" onclick="showAddProject()">+ Add New Project</button>
+        <button class="sync-btn" onclick="loadProjects()">🔄 Refresh Data</button>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color status-not-complete"></div>
+                <span>Not Complete</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-holes-drilled"></div>
+                <span>Holes Drilled</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-rebar"></div>
+                <span>Rebar</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-rods-installed"></div>
+                <span>Rods Installed</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-hss"></div>
+                <span>HSS</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-other"></div>
+                <span>Other</span>
+            </div>
+        </div>
         
         <div id="projectsList"></div>
     </div>
@@ -225,8 +344,54 @@
         </div>
     </div>
     
+    <!-- Location Edit Modal -->
+    <div id="locationModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Location</h2>
+            <form id="locationForm">
+                <div class="form-group">
+                    <label>Location: <span id="locationInfo"></span></label>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="locationStatus">
+                        <option value="Not Complete">Not Complete</option>
+                        <option value="Holes Drilled">Holes Drilled</option>
+                        <option value="Rebar">Rebar</option>
+                        <option value="Rods Installed">Rods Installed</option>
+                        <option value="HSS">HSS</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Technician (Optional)</label>
+                    <input type="text" id="technician">
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="notes"></textarea>
+                </div>
+                
+                <div class="form-group" id="dateGroup">
+                    <label>Completion Date</label>
+                    <input type="date" id="dateCompleted">
+                </div>
+                
+                <button type="button" class="btn-cancel" onclick="hideLocationModal()">Cancel</button>
+                <button type="submit" class="btn-save">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    
     <script>
         let projects = [];
+        let currentProject = null;
+        let currentWall = null;
+        let currentLocation = null;
+        let currentFilter = null;
         
         // Load projects from server
         async function loadProjects() {
@@ -234,6 +399,10 @@
                 const response = await fetch('./data/projects.json');
                 if (response.ok) {
                     projects = await response.json();
+                    renderProjects();
+                } else {
+                    console.log('No projects found, starting fresh');
+                    projects = [];
                     renderProjects();
                 }
             } catch (error) {
@@ -256,6 +425,9 @@
                 
                 if (response.ok) {
                     console.log('Projects saved successfully');
+                    await loadProjects(); // Refresh after save
+                } else {
+                    console.error('Failed to save projects');
                 }
             } catch (error) {
                 console.error('Error saving projects:', error);
@@ -285,17 +457,17 @@
                         <span>${progress}% Complete</span>
                         <span>${completed}/${total} rods</span>
                     </div>
-                    <div class="wall-grid">
-                        ${Object.entries(project.walls || {}).map(([name, wall]) => `
-                            <div class="wall-card">
-                                <div>${name}</div>
-                                <div>${wall.progressPercentage || 0}%</div>
-                                <div>
-                                    <span class="status-indicator status-green"></span>${wall.rodsInstalled || 0}
-                                    <span class="status-indicator status-gray"></span>${wall.notComplete || 0}
-                                </div>
-                            </div>
-                        `).join('')}
+                    <div class="wall-section">
+                        <div class="filter-chips">
+                            <div class="chip ${currentFilter === null ? 'active' : ''}" onclick="setFilter(null, '${project.id}')">All</div>
+                            <div class="chip ${currentFilter === 'Not Complete' ? 'active' : ''}" onclick="setFilter('Not Complete', '${project.id}')">Not Complete</div>
+                            <div class="chip ${currentFilter === 'Holes Drilled' ? 'active' : ''}" onclick="setFilter('Holes Drilled', '${project.id}')">Holes Drilled</div>
+                            <div class="chip ${currentFilter === 'Rebar' ? 'active' : ''}" onclick="setFilter('Rebar', '${project.id}')">Rebar</div>
+                            <div class="chip ${currentFilter === 'Rods Installed' ? 'active' : ''}" onclick="setFilter('Rods Installed', '${project.id}')">Rods Installed</div>
+                            <div class="chip ${currentFilter === 'HSS' ? 'active' : ''}" onclick="setFilter('HSS', '${project.id}')">HSS</div>
+                            <div class="chip ${currentFilter === 'Other' ? 'active' : ''}" onclick="setFilter('Other', '${project.id}')">Other</div>
+                        </div>
+                        ${renderWalls(project)}
                     </div>
                 `;
                 
@@ -303,7 +475,155 @@
             });
         }
         
-        // Show/hide add project modal
+        // Render walls for a project
+        function renderWalls(project) {
+            let html = '';
+            
+            Object.entries(project.walls || {}).forEach(([wallName, wall]) => {
+                // Group locations by bay
+                const bays = {};
+                wall.locations.forEach(location => {
+                    if (!bays[location.bay]) bays[location.bay] = [];
+                    bays[location.bay].push(location);
+                });
+                
+                html += `
+                    <div class="wall-header">
+                        <span>${wallName}</span>
+                        <span>${wall.rodsInstalled || 0}/${wall.locations.length} rods</span>
+                    </div>
+                `;
+                
+                Object.entries(bays).sort(([a], [b]) => a - b).forEach(([bayNum, bayLocations]) => {
+                    html += `
+                        <div class="bay-grid">
+                            <div class="bay-header">Bay ${bayNum}</div>
+                            <div class="location-grid">
+                    `;
+                    
+                    // Sort by window, then by location number
+                    bayLocations.sort((a, b) => {
+                        if (a.window !== b.window) return a.window.localeCompare(b.window);
+                        return a.locationNumber - b.locationNumber;
+                    });
+                    
+                    bayLocations.forEach(location => {
+                        if (!currentFilter || location.status === currentFilter) {
+                            const statusClass = statusToClass(location.status);
+                            html += `
+                                <div class="location-cell ${statusClass}" 
+                                     onclick="editLocation('${project.id}', '${wallName}', '${location.id}')"
+                                     title="Bay ${location.bay}, ${location.window}${location.locationNumber}">
+                                    ${location.locationNumber}
+                                </div>
+                            `;
+                        } else {
+                            html += `<div class="location-cell" style="visibility: hidden;"></div>`;
+                        }
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            
+            return html;
+        }
+        
+        // Convert status to CSS class
+        function statusToClass(status) {
+            return status.toLowerCase().replace(/\s+/g, '-');
+        }
+        
+        // Set filter
+        function setFilter(status, projectId) {
+            currentFilter = status;
+            currentProject = projects.find(p => p.id === projectId);
+            renderProjects();
+        }
+        
+        // Edit location
+        function editLocation(projectId, wallName, locationId) {
+            const project = projects.find(p => p.id === projectId);
+            const wall = project.walls[wallName];
+            const location = wall.locations.find(l => l.id === locationId);
+            
+            currentProject = project;
+            currentWall = wallName;
+            currentLocation = location;
+            
+            document.getElementById('locationInfo').textContent = 
+                `Bay ${location.bay}, ${location.window}${location.locationNumber}`;
+            document.getElementById('locationStatus').value = location.status;
+            document.getElementById('technician').value = location.technician || '';
+            document.getElementById('notes').value = location.notes || '';
+            document.getElementById('dateCompleted').value = location.dateCompleted || '';
+            
+            // Show/hide date field based on status
+            const dateGroup = document.getElementById('dateGroup');
+            if (location.status === 'Rods Installed') {
+                dateGroup.style.display = 'block';
+            } else {
+                dateGroup.style.display = 'none';
+            }
+            
+            document.getElementById('locationModal').style.display = 'block';
+        }
+        
+        // Handle location form submission
+        document.getElementById('locationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const location = currentLocation;
+            const newStatus = document.getElementById('locationStatus').value;
+            
+            // Update location
+            location.status = newStatus;
+            location.technician = document.getElementById('technician').value || null;
+            location.notes = document.getElementById('notes').value || null;
+            
+            if (newStatus === 'Rods Installed') {
+                location.dateCompleted = document.getElementById('dateCompleted').value || new Date().toISOString().split('T')[0];
+            } else {
+                location.dateCompleted = null;
+            }
+            
+            // Update project timestamp
+            currentProject.updatedAt = new Date().toISOString();
+            
+            // Recalculate project statistics
+            recalculateProjectStats(currentProject);
+            
+            await saveProjects();
+            hideLocationModal();
+        });
+        
+        // Recalculate project statistics
+        function recalculateProjectStats(project) {
+            let totalLocations = 0;
+            let completedLocations = 0;
+            
+            Object.values(project.walls).forEach(wall => {
+                wall.rodsInstalled = wall.locations.filter(l => l.status === 'Rods Installed').length;
+                wall.holesDrilled = wall.locations.filter(l => l.status === 'Holes Drilled').length;
+                wall.rebar = wall.locations.filter(l => l.status === 'Rebar').length;
+                wall.notComplete = wall.locations.filter(l => l.status === 'Not Complete').length;
+                wall.hss = wall.locations.filter(l => l.status === 'HSS').length;
+                wall.other = wall.locations.filter(l => l.status === 'Other').length;
+                wall.progressPercentage = Math.round((wall.rodsInstalled / wall.locations.length) * 100);
+                
+                totalLocations += wall.locations.length;
+                completedLocations += wall.rodsInstalled;
+            });
+            
+            project.totalLocations = totalLocations;
+            project.completedLocations = completedLocations;
+            project.progressPercentage = totalLocations > 0 ? Math.round((completedLocations / totalLocations) * 100) : 0;
+        }
+        
+        // Show/hide modals
         function showAddProject() {
             document.getElementById('addProjectModal').style.display = 'block';
         }
@@ -311,6 +631,10 @@
         function hideAddProject() {
             document.getElementById('addProjectModal').style.display = 'none';
             document.getElementById('addProjectForm').reset();
+        }
+        
+        function hideLocationModal() {
+            document.getElementById('locationModal').style.display = 'none';
         }
         
         // Handle add project form
@@ -340,7 +664,6 @@
             
             projects.push(newProject);
             await saveProjects();
-            renderProjects();
             hideAddProject();
         });
         
@@ -385,7 +708,6 @@
         // Generate locations for walls
         function generateLocations(bays, windows, locationsPerWindow) {
             const locations = [];
-            const statuses = ["Not Complete", "Holes Drilled", "Rebar", "Rods Installed", "HSS", "Other"];
             
             for (let bay = 1; bay <= bays; bay++) {
                 for (const window of windows) {
@@ -407,16 +729,25 @@
             return locations;
         }
         
-        // Initialize app
-        loadProjects();
+        // Handle status change to show/hide date field
+        document.getElementById('locationStatus').addEventListener('change', (e) => {
+            const dateGroup = document.getElementById('dateGroup');
+            if (e.target.value === 'Rods Installed') {
+                dateGroup.style.display = 'block';
+            } else {
+                dateGroup.style.display = 'none';
+            }
+        });
         
-        // Close modal when clicking outside
+        // Close modals when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('addProjectModal');
-            if (event.target == modal) {
-                hideAddProject();
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
             }
         }
+        
+        // Initialize app
+        loadProjects();
     </script>
 </body>
 </html>
