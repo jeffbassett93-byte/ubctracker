@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UBC Tracker - Mobile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 16px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: #007AFF;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .project-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .project-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .project-location {
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .progress-fill {
+            background: #34C759;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .add-btn {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        
+        .add-btn:hover {
+            background: #0056CC;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .wall-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .wall-card {
+            background: #f8f8f8;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        
+        .status-green { background: #34C759; }
+        .status-blue { background: #007AFF; }
+        .status-orange { background: #FF9500; }
+        .status-gray { background: #8E8E93; }
+        .status-purple { background: #AF52DE; }
+        .status-pink { background: #FF2D92; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .btn-cancel {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            margin-right: 8px;
+        }
+        
+        .btn-save {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>UBC Concrete Tracker</h1>
+        <p>Mobile Dashboard</p>
+    </div>
+    
+    <div class="container">
+        <button class="add-btn" onclick="showAddProject()">+ Add New Project</button>
+        
+        <div id="projectsList"></div>
+    </div>
+    
+    <!-- Add Project Modal -->
+    <div id="addProjectModal" class="modal">
+        <div class="modal-content">
+            <h2>Add New Project</h2>
+            <form id="addProjectForm">
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="projectName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="projectLocation" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Repair Type</label>
+                    <select id="repairType">
+                        <option value="concrete">Concrete Repair</option>
+                        <option value="fin">Fin Repair</option>
+                        <option value="plate">Plate Installation</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate" required>
+                </div>
+                
+                <button type="button" class="btn-cancel" onclick="hideAddProject()">Cancel</button>
+                <button type="submit" class="btn-save">Save Project</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let projects = [];
+        
+        // Load projects from server
+        async function loadProjects() {
+            try {
+                const response = await fetch('./data/projects.json');
+                if (response.ok) {
+                    projects = await response.json();
+                    renderProjects();
+                }
+            } catch (error) {
+                console.log('No projects found, starting fresh');
+                projects = [];
+                renderProjects();
+            }
+        }
+        
+        // Save projects to server
+        async function saveProjects() {
+            try {
+                const response = await fetch('./api/upload.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(projects)
+                });
+                
+                if (response.ok) {
+                    console.log('Projects saved successfully');
+                }
+            } catch (error) {
+                console.error('Error saving projects:', error);
+            }
+        }
+        
+        // Render projects list
+        function renderProjects() {
+            const container = document.getElementById('projectsList');
+            container.innerHTML = '';
+            
+            projects.forEach(project => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                
+                const progress = project.progressPercentage || 0;
+                const completed = project.completedLocations || 0;
+                const total = project.totalLocations || 0;
+                
+                card.innerHTML = `
+                    <div class="project-title">${project.name}</div>
+                    <div class="project-location">${project.location}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="stats">
+                        <span>${progress}% Complete</span>
+                        <span>${completed}/${total} rods</span>
+                    </div>
+                    <div class="wall-grid">
+                        ${Object.entries(project.walls || {}).map(([name, wall]) => `
+                            <div class="wall-card">
+                                <div>${name}</div>
+                                <div>${wall.progressPercentage || 0}%</div>
+                                <div>
+                                    <span class="status-indicator status-green"></span>${wall.rodsInstalled || 0}
+                                    <span class="status-indicator status-gray"></span>${wall.notComplete || 0}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // Show/hide add project modal
+        function showAddProject() {
+            document.getElementById('addProjectModal').style.display = 'block';
+        }
+        
+        function hideAddProject() {
+            document.getElementById('addProjectModal').style.display = 'none';
+            document.getElementById('addProjectForm').reset();
+        }
+        
+        // Handle add project form
+        document.getElementById('addProjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const newProject = {
+                id: Date.now().toString(),
+                name: document.getElementById('projectName').value,
+                location: document.getElementById('projectLocation').value,
+                repairType: document.getElementById('repairType').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                walls: generateDefaultWalls(),
+                stages: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                progressPercentage: 0,
+                completedLocations: 0,
+                totalLocations: 0
+            };
+            
+            // Calculate totals
+            Object.values(newProject.walls).forEach(wall => {
+                newProject.totalLocations += wall.locations.length;
+            });
+            
+            projects.push(newProject);
+            await saveProjects();
+            renderProjects();
+            hideAddProject();
+        });
+        
+        // Generate default walls for new project
+        function generateDefaultWalls() {
+            return {
+                "North Wall": {
+                    id: Date.now().toString() + '1',
+                    name: "North Wall",
+                    bays: 4,
+                    windows: ["A", "B", "C", "D", "E", "F", "G", "H"],
+                    locationsPerWindow: 4,
+                    locations: generateLocations(4, ["A", "B", "C", "D", "E", "F", "G", "H"], 4)
+                },
+                "East Wall": {
+                    id: Date.now().toString() + '2',
+                    name: "East Wall",
+                    bays: 14,
+                    windows: ["A", "B", "C", "D", "E", "F", "G", "H"],
+                    locationsPerWindow: 4,
+                    locations: generateLocations(14, ["A", "B", "C", "D", "E", "F", "G", "H"], 4)
+                },
+                "South Wall": {
+                    id: Date.now().toString() + '3',
+                    name: "South Wall",
+                    bays: 4,
+                    windows: ["A", "B", "C", "D", "E", "F", "G", "H"],
+                    locationsPerWindow: 4,
+                    locations: generateLocations(4, ["A", "B", "C", "D", "E", "F", "G", "H"], 4)
+                },
+                "West Wall": {
+                    id: Date.now().toString() + '4',
+                    name: "West Wall",
+                    bays: 14,
+                    windows: ["A", "B", "C", "D", "E", "F", "G", "H"],
+                    locationsPerWindow: 4,
+                    locations: generateLocations(14, ["A", "B", "C", "D", "E", "F", "G", "H"], 4)
+                }
+            };
+        }
+        
+        // Generate locations for walls
+        function generateLocations(bays, windows, locationsPerWindow) {
+            const locations = [];
+            const statuses = ["Not Complete", "Holes Drilled", "Rebar", "Rods Installed", "HSS", "Other"];
+            
+            for (let bay = 1; bay <= bays; bay++) {
+                for (const window of windows) {
+                    for (let loc = 1; loc <= locationsPerWindow; loc++) {
+                        locations.push({
+                            id: Date.now().toString() + bay + window + loc,
+                            bay: bay,
+                            window: window,
+                            locationNumber: loc,
+                            status: "Not Complete",
+                            dateCompleted: null,
+                            technician: null,
+                            notes: null
+                        });
+                    }
+                }
+            }
+            
+            return locations;
+        }
+        
+        // Initialize app
+        loadProjects();
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addProjectModal');
+            if (event.target == modal) {
+                hideAddProject();
+            }
+        }
+    </script>
+</body>
+</html>
